@@ -1,4 +1,5 @@
 ﻿using CaterpillarControlSystem.App;
+using NUnit.Framework.Internal;
 
 namespace CaterpillarControlSystem.Tests
 {
@@ -11,40 +12,45 @@ namespace CaterpillarControlSystem.Tests
         public void Setup()
         {
             // Initialize a caterpillar for testing
-            _caterpillar = new Caterpillar();
-
-            _caterpillar.obstacleLocations = new List<(int, int)>()
+            _caterpillar = new Caterpillar
             {
+                obstacleLocations =
+            [
                 new (1, 18),
                 new (2, 25),
                 new (3, 24),
-            };
-            _caterpillar.spiceLocations = new List<(int, int)>()
-            {
+            ],
+                spiceLocations =
+            [
                 new (1, 8),
                 new (2, 15),
                 new (3, 4),
-            };
-            _caterpillar.boosterLocations = new List<(int, int)>()
-            {
+            ],
+                boosterLocations =
+            [
                 new (4, 18),
                 new (15, 25),
                 new (20, 24),
+            ]
             };
         }
         [Test]
         public void InitialCaterpillarLength_Should_ReturnEqual_When_Initiated()
         {
             // Arrange
+            _caterpillar = new Caterpillar();
             // Act
+
             // Assert
-            Assert.That(_caterpillar.GetLength(), Is.EqualTo(1));
+            Assert.That(_caterpillar.segmentPosition, Has.Count.EqualTo(2));
         }
         [Test]
         public void InitialCaterpillarLength_Should_ReturnNotEqual_When_Initiated()
         {
+            //Arrange
+            _caterpillar = new Caterpillar();
             // Assert
-            Assert.That(2, Is.Not.EqualTo(_caterpillar.GetLength()));
+            Assert.That(_caterpillar.segmentPosition, Has.Count.Not.EqualTo(1));
         }
 
         [Test]
@@ -58,7 +64,7 @@ namespace CaterpillarControlSystem.Tests
             _caterpillar.ExecuteRiderCommand(riderCommand, steps);
 
             // Assert
-            //  Assert.AreEqual((0, 1), _caterpillar.HeaderPosition);
+            Assert.That(_caterpillar.headX, Is.EqualTo(-4));
         }
 
         [Test]
@@ -72,7 +78,7 @@ namespace CaterpillarControlSystem.Tests
             _caterpillar.ExecuteRiderCommand(riderCommand, steps);
 
             // Assert
-            //  Assert.AreEqual((0, -1), _caterpillar.HeaderPosition);
+            Assert.That(_caterpillar.headX, Is.EqualTo(1));
         }
 
         [Test]
@@ -87,7 +93,7 @@ namespace CaterpillarControlSystem.Tests
             _caterpillar.ExecuteRiderCommand(riderCommand, steps);
 
             // Assert
-            //  Assert.AreEqual((-1, 0), _caterpillar.HeaderPosition);
+            Assert.That(_caterpillar.headY, Is.EqualTo(-3));
         }
 
         [Test]
@@ -102,7 +108,7 @@ namespace CaterpillarControlSystem.Tests
             _caterpillar.ExecuteRiderCommand(riderCommand, steps);
 
             // Assert
-            //  Assert.AreEqual((1, 0), _caterpillar.HeaderPosition);
+            Assert.That(_caterpillar.headY, Is.EqualTo(3));
         }
 
         [Test]
@@ -115,8 +121,59 @@ namespace CaterpillarControlSystem.Tests
             // Act
             _caterpillar.Grow();
 
+            int distanceY = Math.Abs(_caterpillar.headY - _caterpillar.tailY);
             // Assert
-            Assert.That(_caterpillar.Length, Is.EqualTo(2));
+            Assert.That(distanceY, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestHead_Tail_X_Distance()
+        {
+
+            // Arrange
+
+            _caterpillar = new Caterpillar();
+            // Act
+
+            _caterpillar.Move("R", steps: 3);
+            _caterpillar.Move("D", steps: 2);
+            int distanceX = Math.Abs(_caterpillar.headX - _caterpillar.tailX);
+
+            // Assert
+            Assert.That(distanceX, Is.EqualTo(1));
+
+        }
+        [Test]
+        public void TestHead_Tail_Y_Distance()
+        {
+
+            // Arrange
+
+            _caterpillar = new Caterpillar();
+            // Act
+
+            _caterpillar.Move("R", steps: 3);
+            _caterpillar.Move("D", steps: 2);
+
+            int distanceY = Math.Abs(_caterpillar.headY - _caterpillar.tailY);
+
+            // Assert
+            Assert.That(distanceY, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ValidateDiagonalTailMovement()
+        {
+
+            // Arrange
+            _caterpillar = new Caterpillar();
+
+            // Act
+            _caterpillar.Move("R", steps: 3);
+            _caterpillar.Move("D", steps: 2);
+
+            // Assert
+            Assert.That(_caterpillar.segmentPosition[0], Is.EqualTo((2, 3)));
         }
 
         [Test]
@@ -132,8 +189,9 @@ namespace CaterpillarControlSystem.Tests
             _caterpillar.Grow();
             _caterpillar.Shrink();
 
+            int distanceY = Math.Abs(_caterpillar.headY - _caterpillar.tailY);
             // Assert
-            Assert.That(_caterpillar.Length, Is.EqualTo(3));
+            Assert.That(distanceY, Is.EqualTo(2));
         }
 
         [Test]
@@ -143,6 +201,7 @@ namespace CaterpillarControlSystem.Tests
             Assert.Throws<ArgumentException>(() => _caterpillar.ExecuteRiderCommand('X', 0));
         }
 
+        // Collision Detection Tests
         [Test]
         public void ObstacleCollision_Should_ReturnTrue_When_ObstacleDetected()
         {
@@ -152,7 +211,7 @@ namespace CaterpillarControlSystem.Tests
             bool result = _caterpillar.ObstacleCollision(obstaclePosition.x, obstaclePosition.y);
 
             // Assert
-            Assert.IsTrue(result);
+            Assert.That(result, Is.True);
         }
 
         [Test]
@@ -165,7 +224,7 @@ namespace CaterpillarControlSystem.Tests
             bool result = _caterpillar.ObstacleCollision(nonObstaclePosition.x, nonObstaclePosition.y);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.That(result, Is.False);
         }
 
         [Test]
@@ -178,7 +237,7 @@ namespace CaterpillarControlSystem.Tests
             bool result = _caterpillar.BoosterCollision(boosterPosition.x, boosterPosition.y);
 
             // Assert
-            Assert.IsTrue(result);
+            Assert.That(result, Is.True);
         }
 
         [Test]
@@ -191,7 +250,33 @@ namespace CaterpillarControlSystem.Tests
             bool result = _caterpillar.BoosterCollision(nonBoosterPosition.x, nonBoosterPosition.y);
 
             // Assert
-            Assert.IsFalse(result);
+            Assert.That(result, Is.False);
+        }
+
+        [Test]
+        public void SpiceCollision_Should_ReturnTrue_When_SpiceDetected()
+        {
+            // Arrange
+            (int x, int y) spicePosition = new(2, 15); // Assuming spice position
+
+            // Act
+            bool result = _caterpillar.SpiceCollision(spicePosition.x, spicePosition.y);
+
+            // Assert
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void SpiceCollision_Should_ReturnFalse_When_NoSpiceDetected()
+        {
+            // Arrange
+            (int x, int y) nonSpicePosition = new(18, 18); // Assuming non-spice position
+
+            // Act
+            bool result = _caterpillar.SpiceCollision(nonSpicePosition.x, nonSpicePosition.y);
+
+            // Assert
+            Assert.That(result, Is.False);
         }
     }
 }

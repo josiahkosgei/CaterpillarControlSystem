@@ -22,7 +22,7 @@ while (!obstacleEncountered)
     int steps = 0;
 
     //Steps are not required when the commands are either Grow or Shrink
-    if (!string.IsNullOrEmpty(riderCommand) && !(riderCommand.Equals("G") || riderCommand.Equals("S")))
+    if (!string.IsNullOrEmpty(riderCommand) && !(riderCommand.Equals("G") || riderCommand.Equals("S") || riderCommand.Equals("Z") || riderCommand.Equals("Y")))
     {
 
         Console.WriteLine();

@@ -17,12 +17,12 @@ Build and Run the ```CaterpillarControlSystem.App```
 * R: Move Right
 * G: Grow Caterpillar
 * S: Shrink Caterpillar
+* Z: Undo Command
+* Y: Redo Command
 
-The rider enters a command and will be prompted to enter steps if the command is ```U/D/L/R```
+The rider enters a command and will be prompted to enter steps if the command is either ```U, D, L or R```
 
-```c-sharp
-ExecuteRiderCommand(char riderCommand, int steps = 0)
-```
+
 
 ## Logging
 
