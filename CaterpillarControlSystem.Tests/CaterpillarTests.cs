@@ -12,9 +12,25 @@ namespace CaterpillarControlSystem.Tests
         {
             // Initialize a caterpillar for testing
             _caterpillar = new Caterpillar();
-            _caterpillar.obstaclePositions = [5, 12, 18];
-            _caterpillar.spicePositions = [10, 15, 20];
-            _caterpillar.boosterPositions = [5, 12, 18];
+
+            _caterpillar.obstacleLocations = new List<(int, int)>()
+            {
+                new (1, 18),
+                new (2, 25),
+                new (3, 24),
+            };
+            _caterpillar.spiceLocations = new List<(int, int)>()
+            {
+                new (1, 8),
+                new (2, 15),
+                new (3, 4),
+            };
+            _caterpillar.boosterLocations = new List<(int, int)>()
+            {
+                new (4, 18),
+                new (15, 25),
+                new (20, 24),
+            };
         }
         [Test]
         public void InitialCaterpillarLength_Should_ReturnEqual_When_Initiated()
@@ -94,7 +110,7 @@ namespace CaterpillarControlSystem.Tests
         {
 
             // Arrange
-            _caterpillar= new Caterpillar();
+            _caterpillar = new Caterpillar();
 
             // Act
             _caterpillar.Grow();
@@ -128,24 +144,51 @@ namespace CaterpillarControlSystem.Tests
         }
 
         [Test]
-        public void IsObstacle_Should_ReturnTrue_When_ObstacleDetected()
+        public void ObstacleCollision_Should_ReturnTrue_When_ObstacleDetected()
         {
             // Arrange
-            int obstaclePosition = 5; // Assuming obstacle position
+            (int x, int y) obstaclePosition = new(2, 25); // Assuming obstacle position
             // Act
-            bool result = _caterpillar.IsObstacle(obstaclePosition);
+            bool result = _caterpillar.ObstacleCollision(obstaclePosition.x, obstaclePosition.y);
 
             // Assert
             Assert.IsTrue(result);
         }
 
         [Test]
-        public void IsObstacle_Should_ReturnFalse_When_NoObstacleDetected()
+        public void ObstacleCollision_Should_ReturnFalse_When_NoObstacleDetected()
         {
             // Arrange
-            int nonObstaclePosition = 3; // Assuming non-obstacle position
+            (int x, int y) nonObstaclePosition = new(2, 3);
+
             // Act
-            bool result = _caterpillar.IsObstacle(nonObstaclePosition);
+            bool result = _caterpillar.ObstacleCollision(nonObstaclePosition.x, nonObstaclePosition.y);
+
+            // Assert
+            Assert.IsFalse(result);
+        }
+
+        [Test]
+        public void BoosterCollision_Should_ReturnTrue_When_BoosterDetected()
+        {
+            // Arrange
+            (int x, int y) boosterPosition = new(4, 18); // Assuming booster position
+
+            // Act
+            bool result = _caterpillar.BoosterCollision(boosterPosition.x, boosterPosition.y);
+
+            // Assert
+            Assert.IsTrue(result);
+        }
+
+        [Test]
+        public void BoosterCollision_Should_ReturnFalse_When_NoBoosterDetected()
+        {
+            // Arrange
+            (int x, int y) nonBoosterPosition = new(18, 18); // Assuming non-booster position
+
+            // Act
+            bool result = _caterpillar.BoosterCollision(nonBoosterPosition.x, nonBoosterPosition.y);
 
             // Assert
             Assert.IsFalse(result);

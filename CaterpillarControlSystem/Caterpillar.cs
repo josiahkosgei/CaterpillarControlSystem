@@ -1,126 +1,111 @@
 ﻿using Serilog;
-using System.Reflection.Metadata.Ecma335;
 
 namespace CaterpillarControlSystem.App
 {
     public class Caterpillar
     {
-        // Caterpillar properties
-        const int GRID_SIZE = 30;
+        // properties
+        private const int GRID_SIZE = 30;
+        private const int MAX_SEGMENTS = 5;
         public int Length { get; private set; }
-        public int headIndex = 0;
 
+        //Head position
+        private int headX;
+        private int headY;
+
+        // Tail position
+        private int tailX;
+        private int tailY;
+
+        // segment &&  List of segment positions
         public List<char> segments = new List<char> { 'H', 'T' };
+        private List<(int x, int y)> segmentPosition;
+
+        // store executed commands
         List<string> commandTrail = new List<string>();
         Stack<List<char>> commandsStack = new Stack<List<char>>();
-        public List<int> boosterPositions = new List<int>();
-        public List<int> obstaclePositions = new List<int>();
-        public List<int> spicePositions = new List<int>();
+
+        // to define Land Properties
+        public List<(int, int)> spiceLocations = new List<(int, int)>(); // List of spice coordinates
+        public List<(int, int)> boosterLocations = new List<(int, int)>(); // List of booster coordinates
+        public List<(int, int)> obstacleLocations = new List<(int, int)>(); // List of obstacle coordinates
+
+        // symbols
+        private const char HeadSymbol = 'H';
+        private const char TailSymbol = 'T';
+        private const char BoosterSymbol = 'B';
+        private const char SpiceSymbol = '$';
+        private const char ObstacleSymbol = '#';
+
         protected ILogger _logger;
 
         public Caterpillar()
         {
-            Length = 1;
+            Length = 2;
+
+
+            headX = 0;
+            headY = 0;
+            tailX = 0;
+            tailY = 0;
+            segmentPosition = new List<(int x, int y)> { (0, 0), (0, 0) };
+
             _logger = Log.ForContext(GetType());
         }
 
         // Capterpillar command functions
 
-        private void MoveUp()
+        public void Move(string direction, int steps)
         {
-            if (headIndex > 0)
+            // Update head and tail positions
+            switch (direction)
             {
-                if (!IsObstacle(headIndex - 1))
-                {
-                    headIndex--;
-
-                    // Shift other segments up
-                    for (int i = 1; i < segments.Count; i++)
-                    {
-                        segments[i] = segments[i - 1];
-                    }
-                }
-                else
-                {
-                    _logger.Error("Obstacle detected! Caterpillar disintegrated.");
-                    Environment.Exit(0);
-                }
+                case "U":
+                    headX -= steps;
+                    logCommands("Move Up");
+                    break;
+                case "D":
+                    headX += steps;
+                    logCommands("Move Down");
+                    break;
+                case "L":
+                    headY -= steps;
+                    logCommands("Move Left");
+                    break;
+                case "R":
+                    headY += steps;
+                    logCommands("Move Right");
+                    break;
             }
 
-            logCommands($"Move Up");
+
+            segmentPosition[0] = (headX, headY);
+
+            // Update tail position based on proximity to head
+            UpdateTailPosition();
+            segmentPosition[1] = (tailX, tailY);
+
+            // Handle interactions with spices, boosters, and obstacles
+            HandleInteractions(headX, headY);
+
+            // Ensure caterpillar sensitivity to obstacles
+            //CheckObstacleSensitivity();
+
         }
-
-        private void MoveDown()
-        {
-            if (headIndex < segments.Count - 1)
-            {
-                if (!IsObstacle(headIndex + 1))
-                {
-                    headIndex++;
-                }
-                else
-                {
-                    _logger.Error("Obstacle detected! Caterpillar disintegrated.");
-                    Environment.Exit(0);
-                }
-            }
-
-            logCommands($"Move Down");
-        }
-
-        private void MoveLeft()
-        {
-            if (!IsBooster(headIndex - 1))
-            {
-                // Move the head left
-                headIndex--;
-
-                // Shift other segments left
-                for (int i = 0; i < segments.Count - 1; i++)
-                {
-                    segments[i] = segments[i + 1];
-                }
-            }
-            else
-            {
-                _logger.Information("Booster consumed! Caterpillar grows.");
-                if (segments.Count < 5)
-                {
-                    segments.Add('B');
-                }
-            }
-
-            logCommands($"Move Left");
-        }
-
-        private void MoveRight()
-        {
-            if (!IsSpice(headIndex + 1))
-            {
-                // Move the head right
-                headIndex++;
-
-                // Shift other segments right
-                for (int i = segments.Count - 1; i > 0; i--)
-                {
-                    segments[i] = segments[i - 1];
-                }
-            }
-            else
-            {
-                _logger.Information("Spice ingested!");
-            }
-            logCommands($"Move Right");
-        }
-
         public void Grow()
         {
-            if (Length < 5)
+            int distanceY = Math.Abs(headY - tailY);
+            if (distanceY < MAX_SEGMENTS)
             {
-                segments.Add('B');
-                commandsStack.Push(new List<char>(segments));
+                segments.Add('-');
                 Length++;
+                headY++;
+                segmentPosition[0] = (headX, headY);
+                // Update tail position
+                //UpdateTailPosition();
+
                 logCommands("Grow");
+                commandsStack.Push(new List<char>(segments));
             }
             else
             {
@@ -129,19 +114,25 @@ namespace CaterpillarControlSystem.App
         }
         public void Shrink()
         {
-            if (Length > 2)
+
+            int distanceY = Math.Abs(headY - tailY);
+            if (distanceY > 2)
             {
                 segments.RemoveAt(segments.Count - 1);
-                commandsStack.Push(new List<char>(segments));
                 Length--;
+
+                headY--;
+                segmentPosition[0] = (headX, headY);
+
+
                 logCommands("Shrink");
+                commandsStack.Push(new List<char>(segments));
             }
             else
             {
                 _logger.Error("Cannot shrink below 2 segments.");
             }
         }
-
         public void UndoCommand()
         {
             if (commandsStack.Count > 0)
@@ -156,7 +147,6 @@ namespace CaterpillarControlSystem.App
                 _logger.Information("No commands to undo.");
             }
         }
-
         public void RedoCommand()
         {
             if (commandsStack.Count > 0)
@@ -171,28 +161,15 @@ namespace CaterpillarControlSystem.App
                 _logger.Information("No commands to undo.");
             }
         }
-
-        // Execute rider commands and logs it in a command trail
-
         public void ExecuteRiderCommand(char riderCommand, int steps = 0)
         {
             switch (riderCommand)
             {
                 case 'U':
-                    for (int i = 0; i < steps; i++)
-                        MoveUp();
-                    break;
                 case 'D':
-                    for (int i = 0; i < steps; i++)
-                        MoveDown();
-                    break;
                 case 'L':
-                    for (int i = 0; i < steps; i++)
-                        MoveLeft();
-                    break;
                 case 'R':
-                    for (int i = 0; i < steps; i++)
-                        MoveRight();
+                    Move(riderCommand.ToString(), steps);
                     break;
                 case 'G':
                     Grow();
@@ -213,29 +190,44 @@ namespace CaterpillarControlSystem.App
             }
         }
 
+
         // Helper Functions
 
-        public bool IsObstacle(int obstaclePosition)
+        public bool SpiceCollision(int row, int col)
         {
-            return obstaclePositions.Contains(obstaclePosition);
+            return spiceLocations.Contains((row, col));
+        }
+        public bool BoosterCollision(int row, int col)
+        {
+            return boosterLocations.Contains((row, col));
+        }
+        public bool ObstacleCollision(int row, int col)
+        {
+            // Check if the given position collides with any obstacle
+            return obstacleLocations.Contains((row, col));
+        }
+
+        private void DisintegrateCaterpillar()
+        {
+
+            // Remove all segments (caterpillar disintegrates)
+            segments.Clear();
+
+            // Update head and tail indices
+            headX = -1;
+            headY = -1;
+            tailX = -1;
+            tailY = -1;
+
+            // Log the collision for analysis
+            _logger.Error("Obstacle detected! Caterpillar disintegrated.");
 
         }
-        public bool IsBooster(int position)
-        {
-            return boosterPositions.Contains(position);
-        }
-
-        public bool IsSpice(int position)
-        {
-            return spicePositions.Contains(position);
-        }
-
         private void logCommands(string riderCommand)
         {
             // Log command
             _logger.Information(riderCommand);
         }
-
         public void DisplayRadarImageGrid()
         {
 
@@ -250,16 +242,13 @@ namespace CaterpillarControlSystem.App
                 }
             }
 
-            // Mark caterpillar segments on the grid
-            foreach (var segment in segments)
-            {
-                int x = headIndex + segments.IndexOf(segment);
-                int y = GRID_SIZE / 2; // Center vertically
-                if (x >= 0 && x < GRID_SIZE)
-                {
-                    landGrid[y, x] = segment;
-                }
-            }
+            // Mark head and tail positions
+            //Set head and tail positions
+            var head = segmentPosition[0];
+            var tail = segmentPosition[1];
+            landGrid[head.x, head.y] = HeadSymbol; // Head
+            landGrid[tail.x, tail.y] = TailSymbol;
+
 
             // Display the grid
             for (int i = 0; i < GRID_SIZE; i++)
@@ -271,10 +260,70 @@ namespace CaterpillarControlSystem.App
                 Console.WriteLine();
             }
         }
-
         public int GetLength()
         {
             return Length;
+        }
+        private void HandleInteractions(int headX, int headY)
+        {
+            // Handle interactions with spices, boosters, and growth
+            // Check for obstacle collision
+            if (ObstacleCollision(headX, headY))
+            {
+                DisintegrateCaterpillar(); // Handle collision
+                return; // Exit early
+            }
+
+            // Check for spice at the new head position
+            if (SpiceCollision(headX, headY))
+            {
+
+                segments.Add('$');
+                // Log spice collision
+                logCommands("SpiceCollision");
+                commandsStack.Push(new List<char>(segments));
+            }
+
+            // Check for booster collision
+            if (BoosterCollision(headX, headY))
+            {
+                Grow();
+
+                logCommands("BoosterCollision");
+                commandsStack.Push(new List<char>(segments));
+
+            }
+
+        }
+        private void UpdateTailPosition()
+        {
+            // Calculate distance between head and tail
+            int distanceX = Math.Abs(headX - tailX);
+            int distanceY = Math.Abs(headY - tailY);
+
+            // Define a threshold for pulling the tail (e.g., 5 steps)
+            int pullThreshold = 2;
+
+            // Pull the tail toward the head if needed
+            if (distanceX > pullThreshold || distanceY > pullThreshold)
+            {
+                // Adjust tail position based on head movement
+                if (headX > tailX)
+                    tailX += Math.Min(pullThreshold, headX - tailX); // Move right
+                else if (headX < tailX)
+                    tailX -= Math.Min(pullThreshold, tailX - headX); // Move left
+
+                if (headY > tailY)
+                    tailY += Math.Min(pullThreshold, headY - tailY); // Move down
+                else if (headY < tailY)
+                    tailY -= Math.Min(pullThreshold, tailY - headY); // Move up
+            }
+            else if (distanceX > 0 && distanceY > 0)
+            {
+                // Move tail diagonally toward the head
+                tailX = headX > tailX ? tailX + 1 : tailX - 1;
+                tailY = headY > tailY ? tailY + 1 : tailY - 1;
+            }
         }
     }
 }
